@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blind Search Lab | Uninformed Search Strategies</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧭</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300..800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#f6f1e4;
+  --paper2:#eee5d0;
+  --card:#fbf8ef;
+  --ink:#182236;
+  --ink2:#42506b;
+  --line:rgba(24,34,54,.14);
+  --amber:#f2a516;
+  --coral:#e4572e;
+  --teal:#0f8b8d;
+  --blue:#2d6cdf;
+  --green:#2f9e44;
+  --red:#d64545;
+  --shadow:6px 6px 0 rgba(24,34,54,.9);
+  --shadow-sm:4px 4px 0 rgba(24,34,54,.9);
+  --disp:"Bricolage Grotesque", sans-serif;
+  --body:"Atkinson Hyperlegible", sans-serif;
+  --mono:"JetBrains Mono", monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  font-family:var(--body);
+  color:var(--ink);
+  background-color:var(--paper);
+  background-image:
+    linear-gradient(rgba(24,34,54,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(24,34,54,.045) 1px, transparent 1px);
+  background-size:28px 28px;
+  font-size:17px;
+  line-height:1.6;
+  overflow-x:hidden;
+}
+::selection{background:var(--amber);color:var(--ink)}
+h1,h2,h3,h4{font-family:var(--disp);line-height:1.1}
+button{font-family:inherit;cursor:pointer}
+canvas{display:block}
+
+/* ---------- NAV ---------- */
+nav{
+  position:sticky;top:0;z-index:100;
+  background:var(--paper);
+  border-bottom:3px solid var(--ink);
+  padding:0 22px;
+  display:flex;align-items:center;gap:18px;
+  height:62px;
+}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--disp);font-weight:800;font-size:1.05rem;letter-spacing:.5px;text-transform:uppercase;white-space:nowrap}
+.logo svg{flex:none}
+.nav-links{display:flex;align-items:center;gap:4px;margin-left:auto;list-style:none}
+.nav-links>li{position:relative}
+.nav-links a,.nav-links button.dd-btn{
+  display:block;padding:8px 13px;font-weight:700;font-size:.95rem;
+  color:var(--ink);text-decoration:none;background:none;border:none;
+  border-radius:8px;transition:background .15s, transform .15s;
+}
+.nav-links a:hover,.nav-links button.dd-btn:hover{background:var(--paper2);transform:translateY(-1px)}
+.nav-links a.active{background:var(--ink);color:var(--paper)}
+.dd-btn{display:flex;align-items:center;gap:6px}
+.dd-btn .caret{transition:transform .2s;font-size:.7em}
+li.dd:hover .caret, li.dd.open .caret{transform:rotate(180deg)}
+.dd-panel{
+  position:absolute;top:calc(100% + 10px);left:0;min-width:250px;
+  background:var(--card);border:2.5px solid var(--ink);border-radius:12px;
+  box-shadow:var(--shadow-sm);padding:8px;
+  opacity:0;visibility:hidden;transform:translateY(8px);
+  transition:all .2s ease;
+}
+li.dd:hover .dd-panel, li.dd.open .dd-panel{opacity:1;visibility:visible;transform:translateY(0)}
+.dd-panel a{display:flex;align-items:center;gap:10px;border-radius:8px;padding:9px 10px}
+.dd-panel a:hover{background:var(--paper2)}
+.dd-panel .dot{width:12px;height:12px;border-radius:50%;border:2px solid var(--ink);flex:none}
+.dd-panel small{margin-left:auto;font-family:var(--mono);font-size:.65rem;color:var(--ink2)}
+.burger{display:none;margin-left:auto;background:none;border:2.5px solid var(--ink);border-radius:8px;padding:6px 10px;font-size:1.1rem}
+
+/* ---------- PAGES ---------- */
+.page{display:none;max-width:1180px;margin:0 auto;padding:44px 24px 90px}
+.page.active{display:block}
+.reveal{opacity:0;transform:translateY(22px);transition:opacity .55s ease, transform .55s ease}
+.reveal.in{opacity:1;transform:none}
+
+.kicker{font-family:var(--mono);font-size:.75rem;letter-spacing:2.5px;text-transform:uppercase;color:var(--ink2);display:inline-flex;align-items:center;gap:8px}
+.kicker::before{content:"";width:26px;height:2px;background:var(--coral);display:inline-block}
+
+/* ---------- HERO ---------- */
+.hero{display:grid;grid-template-columns:1.15fr .95fr;gap:44px;align-items:center;padding:26px 0 10px}
+.hero h1{font-size:clamp(2.4rem,5.4vw,4.2rem);font-weight:800;margin:14px 0 18px;letter-spacing:-1px}
+.hero h1 .hl{background:linear-gradient(transparent 55%, var(--amber) 55%);padding:0 4px}
+.hero p.lead{font-size:1.13rem;color:var(--ink2);max-width:34em;margin-bottom:26px}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  font-weight:700;font-size:.98rem;
+  padding:12px 20px;border:2.5px solid var(--ink);border-radius:10px;
+  background:var(--card);color:var(--ink);text-decoration:none;
+  box-shadow:var(--shadow-sm);
+  transition:transform .12s, box-shadow .12s, background .15s;
+}
+.btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 rgba(24,34,54,.9)}
+.btn:active{transform:translate(2px,2px);box-shadow:1px 1px 0 rgba(24,34,54,.9)}
+.btn.solid{background:var(--ink);color:var(--paper)}
+.btn.amber{background:var(--amber)}
+.btn.small{padding:7px 13px;font-size:.86rem;box-shadow:3px 3px 0 rgba(24,34,54,.9)}
+.hero-demo{
+  background:var(--card);border:3px solid var(--ink);border-radius:16px;
+  box-shadow:var(--shadow);padding:16px;transform:rotate(1.2deg);
+  transition:transform .3s;
+}
+.hero-demo:hover{transform:rotate(0deg)}
+.hero-demo-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.hero-demo-head b{font-family:var(--disp);font-size:.95rem}
+.live-chip{font-family:var(--mono);font-size:.7rem;background:var(--coral);color:#fff;padding:3px 9px;border-radius:20px;display:inline-flex;align-items:center;gap:6px}
+.live-chip::before{content:"";width:7px;height:7px;border-radius:50%;background:#fff;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.2}}
+.hero-demo canvas{width:100%;border-radius:8px;border:2px solid var(--ink)}
+.hero-demo-foot{display:flex;justify-content:space-between;margin-top:10px;font-family:var(--mono);font-size:.75rem;color:var(--ink2)}
+
+/* ticker */
+.ticker{border-block:2.5px solid var(--ink);background:var(--ink);color:var(--paper);overflow:hidden;margin:44px 0 54px}
+.ticker-track{display:flex;gap:0;white-space:nowrap;width:max-content;animation:tick 34s linear infinite}
+.ticker:hover .ticker-track{animation-play-state:paused}
+.ticker span{font-family:var(--mono);font-size:.85rem;padding:10px 0}
+.ticker span i{font-style:normal;color:var(--amber);padding:0 18px}
+@keyframes tick{to{transform:translateX(-50%)}}
+
+/* section heads */
+.sec-head{margin-bottom:26px}
+.sec-head h2{font-size:clamp(1.7rem,3.4vw,2.5rem);font-weight:800;margin-top:8px}
+.sec-head p{color:var(--ink2);max-width:44em;margin-top:6px}
+
+/* cards */
+.card{background:var(--card);border:2.5px solid var(--ink);border-radius:14px;box-shadow:var(--shadow-sm);padding:22px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(235px,1fr));gap:20px}
+.algo-card{position:relative;overflow:hidden;transition:transform .2s, box-shadow .2s;text-align:left}
+.algo-card:hover{transform:translate(-3px,-3px);box-shadow:8px 8px 0 rgba(24,34,54,.9)}
+.algo-card .band{height:9px;margin:-22px -22px 16px;border-bottom:2.5px solid var(--ink)}
+.algo-card h3{font-size:1.35rem;margin-bottom:6px;display:flex;align-items:center;gap:9px}
+.algo-card p{font-size:.93rem;color:var(--ink2);margin-bottom:14px}
+.algo-card .go{font-weight:700;font-size:.9rem;display:inline-flex;gap:6px;align-items:center}
+.algo-card .go .arr{transition:transform .2s}
+.algo-card:hover .go .arr{transform:translateX(6px)}
+.mini-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.mini-chips span{font-family:var(--mono);font-size:.64rem;border:1.5px solid var(--ink);border-radius:20px;padding:2px 8px;background:var(--paper)}
+
+.home-grid2{display:grid;grid-template-columns:1.1fr .9fr;gap:26px;margin-top:26px}
+pre.code{
+  background:var(--ink);color:#f2ecdd;border-radius:12px;border:2.5px solid var(--ink);
+  padding:20px 22px;font-family:var(--mono);font-size:.86rem;line-height:1.75;overflow-x:auto;
+  box-shadow:var(--shadow-sm);position:relative;
+}
+pre.code .kw{color:var(--amber)}
+pre.code .cm{color:#8fa0c2}
+.copy-btn{position:absolute;top:10px;right:10px;font-size:.7rem;font-family:var(--mono);background:var(--paper);border:none;border-radius:6px;padding:4px 9px;font-weight:700}
+.copy-btn:hover{background:var(--amber)}
+
+.qs-strip{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:26px}
+.qs-box{border:2.5px solid var(--ink);border-radius:14px;padding:20px;background:var(--card)}
+.qs-box h4{font-size:1.15rem;margin-bottom:10px;display:flex;align-items:center;gap:10px}
+.qs-box .belt{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--mono);font-size:.85rem}
+.belt .cell{border:2px solid var(--ink);border-radius:8px;padding:6px 11px;background:var(--paper)}
+.belt .cell.hot{background:var(--amber);animation:pulse 1.4s infinite}
+@keyframes pulse{50%{transform:scale(1.07)}}
+
+.note,.warn,.tip{border-left:6px solid;border-radius:0 12px 12px 0;padding:14px 18px;margin:18px 0;font-size:.97rem}
+.note{border-color:var(--amber);background:rgba(242,165,22,.12)}
+.warn{border-color:var(--red);background:rgba(214,69,69,.1)}
+.tip{border-color:var(--teal);background:rgba(15,139,141,.1)}
+.note b,.warn b,.tip b{font-family:var(--disp)}
+
+/* ---------- ALGO PAGES ---------- */
+.algo-head{display:flex;gap:26px;align-items:flex-start;border-bottom:3px solid var(--ink);padding-bottom:24px;margin-bottom:30px;flex-wrap:wrap}
+.big-num{font-family:var(--disp);font-weight:800;font-size:clamp(3.4rem,8vw,5.6rem);line-height:.85;color:transparent;-webkit-text-stroke:2.5px var(--acc,var(--ink));flex:none}
+.algo-head h2{font-size:clamp(1.9rem,4vw,3rem);font-weight:800;margin:4px 0 8px}
+.algo-head .tag{color:var(--ink2);font-size:1.05rem;max-width:46em}
+.verdicts{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.vchip{font-family:var(--mono);font-size:.74rem;font-weight:700;border:2px solid var(--ink);border-radius:20px;padding:5px 12px;background:var(--card)}
+.vchip.ok{background:#d9efdc}
+.vchip.no{background:#f8d9d9}
+.vchip.mid{background:#fdeecb}
+.lesson{display:grid;grid-template-columns:1.05fr .95fr;gap:34px;align-items:start}
+.lesson .prose h3{font-size:1.35rem;margin:26px 0 10px;display:flex;gap:10px;align-items:center}
+.lesson .prose h3 .n{font-family:var(--mono);font-size:.75rem;border:2px solid var(--acc,var(--ink));color:var(--acc,var(--ink));border-radius:6px;padding:2px 7px}
+.lesson .prose p{margin-bottom:12px}
+.lesson .prose ul{margin:0 0 14px 22px}
+.lesson .prose li{margin-bottom:6px}
+.fig-box{border:2px dashed var(--ink2);border-radius:12px;padding:12px;margin:16px 0;background:var(--paper)}
+.fig-box figcaption{font-family:var(--mono);font-size:.72rem;color:var(--ink2);text-align:center;margin-top:6px}
+.sticky-viz{position:sticky;top:84px}
+.page-pills{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:22px}
+.page-pills a{font-family:var(--mono);font-size:.74rem;text-decoration:none;color:var(--ink);border:2px solid var(--ink);border-radius:20px;padding:4px 12px;background:var(--card);transition:.15s}
+.page-pills a:hover{background:var(--amber)}
+.page-pills a.cur{background:var(--ink);color:var(--paper)}
+
+/* ---------- VIZ ---------- */
+.viz{background:var(--card);border:3px solid var(--ink);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
+.viz-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:2.5px solid var(--ink);background:var(--paper2)}
+.viz-head b{font-family:var(--disp);font-size:.92rem;letter-spacing:.5px}
+.viz-badge{font-family:var(--mono);font-size:.68rem;font-weight:700;background:var(--acc,var(--ink));color:#fff;padding:3px 10px;border-radius:20px}
+.viz svg{width:100%;height:auto;display:block;background:
+  radial-gradient(circle at 50% 0%, rgba(242,165,22,.07), transparent 60%)}
+.viz-msg{min-height:56px;padding:11px 16px;border-top:2px dashed var(--line);font-size:.93rem;font-weight:700;display:flex;align-items:center;gap:10px}
+.viz-msg.pop{animation:msgpop .35s ease}
+@keyframes msgpop{from{opacity:0;transform:translateY(6px)}}
+.viz-panels{display:grid;grid-template-columns:1.2fr 1fr;gap:0;border-top:2px dashed var(--line)}
+.viz-panel{padding:11px 16px}
+.viz-panel+.viz-panel{border-left:2px dashed var(--line)}
+.viz-panel h5{font-family:var(--mono);font-size:.66rem;letter-spacing:1.5px;text-transform:uppercase;color:var(--ink2);margin-bottom:7px}
+.chips-row{display:flex;flex-wrap:wrap;gap:6px;min-height:30px;align-items:center}
+.fchip{font-family:var(--mono);font-weight:700;font-size:.8rem;border:2px solid var(--ink);border-radius:8px;padding:3px 9px;background:var(--amber);animation:chipin .25s ease}
+.fchip.ghost{background:var(--paper)}
+@keyframes chipin{from{transform:scale(.6);opacity:0}}
+.edge-label{font-family:var(--mono);font-size:.62rem;color:var(--ink2)}
+.order-txt{font-family:var(--mono);font-size:.86rem;font-weight:700;letter-spacing:1px;word-break:break-word}
+.viz-controls{display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:2.5px solid var(--ink);background:var(--paper2);flex-wrap:wrap}
+.vbtn{border:2px solid var(--ink);background:var(--card);border-radius:8px;padding:6px 12px;font-weight:700;font-size:.85rem;transition:.12s}
+.vbtn:hover:not(:disabled){background:var(--amber);transform:translateY(-1px)}
+.vbtn:disabled{opacity:.4;cursor:default}
+.vbtn.play{background:var(--ink);color:var(--paper)}
+.viz-meta{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}
+.meta-chip{font-family:var(--mono);font-size:.68rem;border:1.5px solid var(--ink);border-radius:6px;padding:3px 8px;background:var(--card)}
+.limit-row{display:flex;gap:6px;align-items:center;padding:10px 16px;border-top:2px dashed var(--line);flex-wrap:wrap}
+.limit-row .lab{font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--ink2)}
+.lbtn{width:34px;height:34px;border:2px solid var(--ink);border-radius:8px;background:var(--card);font-family:var(--mono);font-weight:700;transition:.12s}
+.lbtn:hover{transform:translateY(-2px)}
+.lbtn.on{background:var(--blue);color:#fff}
+
+/* svg node states */
+.node circle.body{fill:var(--card);stroke:var(--ink);stroke-width:2.5;transition:fill .2s}
+.node text{font-family:var(--disp);font-weight:700;font-size:17px;fill:var(--ink);text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.node .goalring{fill:none;stroke:var(--coral);stroke-width:2;stroke-dasharray:4 4}
+.node .goaltag{font-family:var(--mono);font-size:10px;fill:var(--coral);text-anchor:middle;font-weight:700}
+.node.front circle.body{fill:var(--amber)}
+.node.cur circle.body{fill:var(--coral)}
+.node.cur{animation:wiggle .5s ease}
+@keyframes wiggle{25%{transform:translateY(-3px)}75%{transform:translateY(2px)}}
+.node.done circle.body{fill:#b9c4d8}
+.node.cut circle.body{fill:var(--card);stroke:var(--red);stroke-dasharray:5 3}
+.node.win circle.body{fill:var(--green)}
+.node.win text{fill:#fff}
+.edge{stroke:var(--ink2);stroke-width:2;transition:.25s}
+.edge.path{stroke:var(--green);stroke-width:5}
+.lvl{stroke:var(--line);stroke-dasharray:3 5}
+.lvltxt{font-family:var(--mono);font-size:10px;fill:var(--ink2)}
+
+/* ---------- MAZE PAGE ---------- */
+.maze-layout{display:grid;grid-template-columns:1fr;gap:26px}
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.tool{border:2px solid var(--ink);background:var(--card);border-radius:8px;padding:6px 12px;font-size:.83rem;font-weight:700;transition:.12s}
+.tool:hover{transform:translateY(-1px)}
+.tool.on{background:var(--ink);color:var(--paper)}
+.maze-wrap{display:grid;grid-template-columns:auto 200px;gap:18px;align-items:start}
+#mazeCanvas{border:3px solid var(--ink);border-radius:10px;background:var(--card);touch-action:none;max-width:100%}
+.side-panel{display:flex;flex-direction:column;gap:10px}
+.stat{border:2px solid var(--ink);border-radius:10px;background:var(--paper);padding:8px 12px}
+.stat b{font-family:var(--mono);font-size:1.15rem;display:block}
+.stat span{font-size:.72rem;font-family:var(--mono);text-transform:uppercase;letter-spacing:1px;color:var(--ink2)}
+select,input[type=range]{accent-color:var(--ink)}
+select{border:2px solid var(--ink);border-radius:8px;padding:6px 9px;font-family:inherit;font-weight:700;background:var(--card)}
+.race-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.racer{border:2.5px solid var(--ink);border-radius:12px;background:var(--card);overflow:hidden;position:relative}
+.racer-head{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;border-bottom:2px solid var(--ink);background:var(--paper2)}
+.racer-head b{font-family:var(--disp)}
+.racer canvas{width:100%;background:var(--card)}
+.racer-stats{display:flex;justify-content:space-between;padding:7px 12px;font-family:var(--mono);font-size:.7rem;border-top:2px dashed var(--line)}
+.racer .stamp{position:absolute;inset:0;display:none;align-items:center;justify-content:center;font-family:var(--disp);font-weight:800;font-size:1.4rem;background:rgba(246,241,228,.72);flex-direction:column;gap:4px}
+.racer.finished .stamp{display:flex}
+.stamp .crown{font-size:1.8rem}
+
+/* ---------- COMPARE ---------- */
+.cmp-table-wrap{overflow-x:auto;border:2.5px solid var(--ink);border-radius:14px;box-shadow:var(--shadow-sm);background:var(--card)}
+table.cmp{border-collapse:collapse;width:100%;min-width:760px}
+table.cmp th,table.cmp td{padding:12px 15px;text-align:left;border-bottom:1.5px solid var(--line);font-size:.92rem}
+table.cmp thead th{background:var(--ink);color:var(--paper);font-family:var(--disp);font-size:1rem}
+table.cmp thead th small{display:block;font-family:var(--mono);font-weight:400;font-size:.62rem;opacity:.75}
+table.cmp tbody th{font-family:var(--mono);font-size:.72rem;text-transform:uppercase;letter-spacing:1px;color:var(--ink2)}
+table.cmp tbody tr{transition:background .15s}
+table.cmp tbody tr:hover{background:rgba(242,165,22,.14)}
+td .yes{color:var(--green);font-weight:700}
+td .no{color:var(--red);font-weight:700}
+td .mid{color:#b47b0a;font-weight:700}
+.mono{font-family:var(--mono)}
+
+.calc{display:grid;grid-template-columns:290px 1fr;gap:26px;margin-top:26px}
+.sliders label{display:block;font-family:var(--mono);font-size:.75rem;text-transform:uppercase;letter-spacing:1px;margin:16px 0 4px;color:var(--ink2)}
+.sliders input[type=range]{width:100%}
+.sliders .val{font-family:var(--disp);font-weight:800;font-size:1.3rem}
+.bar-row{margin-bottom:16px}
+.bar-row .bar-top{display:flex;justify-content:space-between;font-size:.86rem;margin-bottom:4px}
+.bar-row .bar-top b{font-family:var(--mono)}
+.bar{height:26px;border:2px solid var(--ink);border-radius:8px;background:var(--paper);overflow:hidden}
+.bar i{display:block;height:100%;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+#calcSentence{margin-top:8px;font-size:.98rem}
+
+.quiz-q{border:2.5px solid var(--ink);border-radius:14px;background:var(--card);padding:18px 20px;margin-bottom:16px;box-shadow:var(--shadow-sm)}
+.quiz-q h4{font-size:1.05rem;margin-bottom:12px}
+.quiz-opts{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.quiz-opts button{border:2px solid var(--ink);border-radius:9px;background:var(--paper);padding:9px 13px;font-size:.9rem;font-weight:700;text-align:left;transition:.12s}
+.quiz-opts button:hover:not(:disabled){background:var(--amber);transform:translateX(3px)}
+.quiz-opts button.right{background:#c9eccd;border-color:var(--green)}
+.quiz-opts button.wrong{background:#f6d3d3;border-color:var(--red)}
+.quiz-opts button:disabled{cursor:default;opacity:.85}
+.quiz-why{display:none;margin-top:12px;font-size:.9rem;border-left:5px solid var(--teal);padding:8px 12px;background:rgba(15,139,141,.09);border-radius:0 8px 8px 0}
+.quiz-why.show{display:block}
+
+/* ---------- GLOSSARY ---------- */
+.gloss-search{width:100%;max-width:440px;border:2.5px solid var(--ink);border-radius:10px;padding:11px 16px;font-family:inherit;font-size:1rem;background:var(--card);margin-bottom:24px}
+.gloss-search:focus{outline:3px solid var(--amber)}
+.gloss-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.gterm{border:2px solid var(--ink);border-radius:12px;background:var(--card);padding:15px 17px;transition:transform .15s, box-shadow .15s}
+.gterm:hover{transform:translateY(-3px);box-shadow:var(--shadow-sm)}
+.gterm h4{font-size:1.05rem;margin-bottom:5px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.gterm p{font-size:.87rem;color:var(--ink2)}
+.gtag{font-family:var(--mono);font-size:.6rem;border:1.5px solid var(--ink);border-radius:12px;padding:1px 8px;white-space:nowrap;flex:none}
+
+footer{border-top:3px solid var(--ink);background:var(--ink);color:var(--paper);padding:34px 24px;margin-top:40px}
+.foot-in{max-width:1180px;margin:0 auto;display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+footer a{color:var(--amber);text-decoration:none;font-weight:700}
+footer a:hover{text-decoration:underline}
+footer .fm{font-family:var(--mono);font-size:.75rem;opacity:.7;margin-top:6px}
+
+@media(max-width:960px){
+  .hero{grid-template-columns:1fr}
+  .lesson{grid-template-columns:1fr}
+  .sticky-viz{position:static}
+  .home-grid2,.qs-strip,.calc{grid-template-columns:1fr}
+  .maze-wrap{grid-template-columns:1fr}
+  .race-grid{grid-template-columns:1fr}
+  .burger{display:block}
+  .nav-links{
+    display:none;position:absolute;top:62px;left:0;right:0;
+    flex-direction:column;align-items:stretch;background:var(--paper);
+    border-bottom:3px solid var(--ink);padding:12px;gap:2px;
+  }
+  .nav-links.open{display:flex}
+  .dd-panel{position:static;opacity:1;visibility:visible;transform:none;display:none;box-shadow:none;border:none;margin-top:4px}
+  li.dd.open .dd-panel{display:block}
+}
+@media(max-width:560px){
+  .viz-panels{grid-template-columns:1fr}
+  .viz-panel+.viz-panel{border-left:none;border-top:2px dashed var(--line)}
+  .quiz-opts{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="#" data-page="home" style="text-decoration:none;color:inherit">
+    <svg width="30" height="30" viewBox="0 0 30 30" fill="none">
+      <rect x="1.5" y="1.5" width="27" height="27" rx="4" stroke="#182236" stroke-width="3"/>
+      <path d="M8 22V8h7v7h7" stroke="#e4572e" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <circle cx="22" cy="22" r="3" fill="#f2a516" stroke="#182236" stroke-width="2"/>
+    </svg>
+    Blind Search Lab
+  </a>
+  <button class="burger" id="burger" aria-label="menu">☰</button>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#" data-page="home">Home</a></li>
+    <li class="dd" id="ddItem">
+      <button class="dd-btn" id="ddToggle">Algorithms <span class="caret">▼</span></button>
+      <div class="dd-panel">
+        <a href="#" data-page="bfs"><span class="dot" style="background:var(--amber)"></span>Breadth First Search<small>O(b^d) space</small></a>
+        <a href="#" data-page="dfs"><span class="dot" style="background:var(--coral)"></span>Depth First Search<small>O(b·m) space</small></a>
+        <a href="#" data-page="dls"><span class="dot" style="background:var(--blue)"></span>Depth Limited Search<small>limit = l</small></a>
+        <a href="#" data-page="ids"><span class="dot" style="background:var(--teal)"></span>Iterative Deepening<small>best default</small></a>
+      </div>
+    </li>
+    <li><a href="#" data-page="maze">Maze Playground</a></li>
+    <li><a href="#" data-page="compare">Compare</a></li>
+    <li><a href="#" data-page="glossary">Glossary</a></li>
+  </ul>
+</nav>
+
+<!-- ================= HOME ================= -->
+<section class="page" id="page-home">
+  <div class="hero">
+    <div>
+      <span class="kicker">Uninformed Search · Blind Strategies</span>
+      <h1>Searching a maze with <span class="hl">no map</span> and no hints.</h1>
+      <p class="lead">A blind search agent can only do two things: see which moves are available right now, and check if it has arrived. Everything on this site shows, live and step by step, how four classic strategies do exactly that.</p>
+      <div style="display:flex;gap:14px;flex-wrap:wrap">
+        <a class="btn solid" href="#" data-page="maze">🕹 Open the Maze Playground</a>
+        <a class="btn amber" href="#" data-page="bfs">Start with BFS →</a>
+      </div>
+    </div>
+    <div class="hero-demo">
+      <div class="hero-demo-head"><b>BFS exploring a maze, on loop</b><span class="live-chip">LIVE</span></div>
+      <canvas id="heroCanvas" width="450" height="270"></canvas>
+      <div class="hero-demo-foot"><span id="heroCount">nodes expanded: 0</span><span id="heroIter">run 1</span></div>
+    </div>
+  </div>
+
+  <div class="ticker">
+    <div class="ticker-track" id="tickerTrack">
+      <span>FIFO QUEUE<i>◆</i>LIFO STACK<i>◆</i>FRONTIER<i>◆</i>EXPLORED SET<i>◆</i>COMPLETENESS<i>◆</i>OPTIMALITY<i>◆</i>BRANCHING FACTOR b<i>◆</i>GOAL DEPTH d<i>◆</i>CUTOFF<i>◆</i>FAILURE<i>◆</i>BACKTRACKING<i>◆</i>NO HEURISTIC<i>◆</i></span>
+    </div>
+  </div>
+
+  <div class="sec-head reveal">
+    <span class="kicker">The core idea</span>
+    <h2>One loop. Four personalities.</h2>
+    <p>Every blind search runs the same loop: pick a node from the frontier, test it, expand it. The ONLY thing that changes between strategies is which node leaves the frontier next. That choice is made by one data structure.</p>
+  </div>
+
+  <div class="home-grid2">
+    <pre class="code reveal"><button class="copy-btn" data-copy="code1">copy</button><code id="code1"><span class="cm">// the generic search loop</span>
+frontier ← { initial state }
+
+<span class="kw">loop</span>:
+    <span class="kw">if</span> frontier is empty → <span class="kw">return</span> FAILURE
+    node ← remove <span class="cm">ONE</span> node from frontier
+    <span class="kw">if</span> node is goal → <span class="kw">return</span> solution
+    add node's children to frontier</code></pre>
+    <div class="qs-strip reveal" style="margin-top:0;grid-template-columns:1fr;gap:16px">
+      <div class="qs-box">
+        <h4>🚶 Queue → Breadth First</h4>
+        <div class="belt"><span class="cell hot">B</span><span class="cell">C</span><span class="cell">D</span><span>← oldest leaves first</span></div>
+        <p style="font-size:.86rem;color:var(--ink2);margin-top:9px">Like a line at a shop. Whoever joined first is served first. The search spreads level by level, like a wave.</p>
+      </div>
+      <div class="qs-box">
+        <h4>🍽 Stack → Depth First</h4>
+        <div class="belt"><span class="cell hot">D</span><span class="cell">C</span><span class="cell">B</span><span>← newest leaves first</span></div>
+        <p style="font-size:.86rem;color:var(--ink2);margin-top:9px">Like a stack of plates. You always take the one you just placed. The search dives deep, then backtracks.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-head reveal" style="margin-top:60px">
+    <span class="kicker">Pick a lesson</span>
+    <h2>The four strategies</h2>
+  </div>
+  <div class="grid4">
+    <button class="card algo-card reveal" data-page="bfs">
+      <div class="band" style="background:var(--amber)"></div>
+      <h3>BFS</h3>
+      <div class="mini-chips"><span>complete</span><span>optimal*</span><span>O(b^d) space</span></div>
+      <p>Explores level by level using a FIFO queue. Finds the shallowest goal, but stores a whole level in memory.</p>
+      <span class="go">Open lesson <span class="arr">→</span></span>
+    </button>
+    <button class="card algo-card reveal" data-page="dfs">
+      <div class="band" style="background:var(--coral)"></div>
+      <h3>DFS</h3>
+      <div class="mini-chips"><span>not complete</span><span>not optimal</span><span>O(b·m) space</span></div>
+      <p>Dives down one branch as far as it can using a LIFO stack, then backtracks. Tiny memory, risky choices.</p>
+      <span class="go">Open lesson <span class="arr">→</span></span>
+    </button>
+    <button class="card algo-card reveal" data-page="dls">
+      <div class="band" style="background:var(--blue)"></div>
+      <h3>DLS</h3>
+      <div class="mini-chips"><span>needs limit l</span><span>CUTOFF result</span><span>O(b·l) space</span></div>
+      <p>DFS with a safety rail: never go deeper than limit l. Fixes infinite paths, but you must guess the limit.</p>
+      <span class="go">Open lesson <span class="arr">→</span></span>
+    </button>
+    <button class="card algo-card reveal" data-page="ids">
+      <div class="band" style="background:var(--teal)"></div>
+      <h3>IDS</h3>
+      <div class="mini-chips"><span>complete</span><span>optimal*</span><span>O(b·d) space</span></div>
+      <p>Runs DLS with limit 0, then 1, then 2, and so on. BFS guarantees with DFS memory. The usual winner.</p>
+      <span class="go">Open lesson <span class="arr">→</span></span>
+    </button>
+  </div>
+
+  <div class="note reveal" style="margin-top:36px"><b>The repeated states trap.</b> Real problems are graphs, not trees. The same city can be reached by many roads, and roads can loop back. Without an <b>explored set</b> (closed list), DFS can circle forever and every strategy wastes work. Keeping that set costs extra memory, and for DFS it destroys the linear space advantage.</div>
+
+  <div class="sec-head reveal" style="margin-top:50px"><span class="kicker">Notation used everywhere</span><h2>The four letters to memorize</h2></div>
+  <div class="grid4 reveal">
+    <div class="card" style="text-align:center"><div style="font-family:var(--disp);font-size:2.6rem;font-weight:800;color:var(--coral)">b</div><b>Branching factor</b><p style="font-size:.88rem;color:var(--ink2)">max children per node</p></div>
+    <div class="card" style="text-align:center"><div style="font-family:var(--disp);font-size:2.6rem;font-weight:800;color:var(--amber)">d</div><b>Goal depth</b><p style="font-size:.88rem;color:var(--ink2)">depth of shallowest goal</p></div>
+    <div class="card" style="text-align:center"><div style="font-family:var(--disp);font-size:2.6rem;font-weight:800;color:var(--blue)">m</div><b>Max depth</b><p style="font-size:.88rem;color:var(--ink2)">deepest possible path, maybe infinite</p></div>
+    <div class="card" style="text-align:center"><div style="font-family:var(--disp);font-size:2.6rem;font-weight:800;color:var(--teal)">l</div><b>Depth limit</b><p style="font-size:.88rem;color:var(--ink2)">the cutoff used by DLS</p></div>
+  </div>
+</section>
+
+<!-- ================= BFS ================= -->
+<section class="page" id="page-bfs" style="--acc:var(--amber)">
+  <div class="page-pills">
+    <a href="#" data-page="bfs" class="cur">01 BFS</a><a href="#" data-page="dfs">02 DFS</a><a href="#" data-page="dls">03 DLS</a><a href="#" data-page="ids">04 IDS</a>
+  </div>
+  <div class="algo-head reveal">
+    <div class="big-num">01</div>
+    <div>
+      <span class="kicker">FIFO queue frontier</span>
+      <h2>Breadth First Search</h2>
+      <p class="tag">Expand the shallowest unexpanded node first. Finish an entire level before touching the next one, like a wave of water spreading across a map.</p>
+      <div class="verdicts">
+        <span class="vchip ok">COMPLETE: YES*</span><span class="vchip ok">OPTIMAL: YES (unit costs)</span><span class="vchip mid">TIME: O(b^d)</span><span class="vchip no">SPACE: O(b^d)</span>
+      </div>
+    </div>
+  </div>
+  <div class="lesson">
+    <div class="prose">
+      <h3><span class="n">A</span>The idea</h3>
+      <p>New children are added to the <b>back</b> of a FIFO queue, and the next node always comes from the <b>front</b>. Older nodes are always shallower, so the tree is explored level by level: root, then all depth 1 nodes, then all depth 2 nodes, and so on.</p>
+      <figure class="fig-box">
+        <svg viewBox="0 0 300 120" width="100%">
+          <circle cx="40" cy="60" r="9" fill="#e4572e" stroke="#182236" stroke-width="2.5"/>
+          <path d="M62 30 A42 42 0 0 1 62 90" fill="none" stroke="#f2a516" stroke-width="5" stroke-linecap="round"/>
+          <path d="M84 16 A66 66 0 0 1 84 104" fill="none" stroke="#f2a516" stroke-width="5" stroke-linecap="round" opacity=".65"/>
+          <path d="M106 4 A90 90 0 0 1 106 116" fill="none" stroke="#f2a516" stroke-width="5" stroke-linecap="round" opacity=".35"/>
+          <text x="140" y="42" font-family="JetBrains Mono" font-size="11" fill="#42506b">level 0 done</text>
+          <text x="140" y="62" font-family="JetBrains Mono" font-size="11" fill="#42506b">level 1 done</text>
+          <text x="140" y="82" font-family="JetBrains Mono" font-size="11" fill="#42506b">level 2 next...</text>
+        </svg>
+        <figcaption>BFS spreads outward in rings. It cannot skip a level.</figcaption>
+      </figure>
+      <h3><span class="n">B</span>Why it is complete and optimal</h3>
+      <ul>
+        <li><b>Complete:</b> every shallower level is exhausted first, so the shallowest goal is guaranteed to be reached (if b is finite).</li>
+        <li><b>Optimal only when all step costs are equal.</b> Then fewest steps means lowest cost. With different step costs, a short path can still be expensive, and BFS does not see that.</li>
+      </ul>
+      <h3><span class="n">C</span>The memory wall</h3>
+      <p>BFS keeps every generated node in the queue. With b = 10 and a goal at depth 12, the deepest level alone holds about 10<sup>12</sup> nodes. At 1 KB each, that is roughly a <b>petabyte</b>. In practice, BFS runs out of memory long before it runs out of time.</p>
+      <div class="warn"><b>Rule of thumb:</b> use BFS only when solutions are shallow and the space is small enough to fit in RAM.</div>
+      <h3><span class="n">D</span>Now drive it yourself</h3>
+      <p>In the lab, the goal is node <b>K</b>. Watch BFS patiently chew through B, C, D, E, F before it ever touches K. Then open the DFS page and compare the order on the exact same tree.</p>
+    </div>
+    <div class="sticky-viz"><div id="vizBfs"></div></div>
+  </div>
+</section>
+
+<!-- ================= DFS ================= -->
+<section class="page" id="page-dfs" style="--acc:var(--coral)">
+  <div class="page-pills">
+    <a href="#" data-page="bfs">01 BFS</a><a href="#" data-page="dfs" class="cur">02 DFS</a><a href="#" data-page="dls">03 DLS</a><a href="#" data-page="ids">04 IDS</a>
+  </div>
+  <div class="algo-head reveal">
+    <div class="big-num">02</div>
+    <div>
+      <span class="kicker">LIFO stack frontier</span>
+      <h2>Depth First Search</h2>
+      <p class="tag">Expand the deepest unexpanded node first. Commit to one path, follow it to the bitter end, then backtrack and try the next branch.</p>
+      <div class="verdicts">
+        <span class="vchip no">COMPLETE: NO</span><span class="vchip no">OPTIMAL: NO</span><span class="vchip mid">TIME: O(b^m)</span><span class="vchip ok">SPACE: O(b·m)</span>
+      </div>
+    </div>
+  </div>
+  <div class="lesson">
+    <div class="prose">
+      <h3><span class="n">A</span>The idea</h3>
+      <p>Children are pushed onto a <b>LIFO stack</b>, so the newest node is always expanded next. The search plunges downward. When it hits a leaf or a dead end, it pops back up to the most recent node that still has unexplored children. That return trip is called <b>backtracking</b>.</p>
+      <figure class="fig-box">
+        <svg viewBox="0 0 300 120" width="100%">
+          <polyline points="30,15 90,15 90,45 40,45 40,80 130,80 130,105" fill="none" stroke="#e4572e" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <polygon points="130,112 124,100 136,100" fill="#e4572e"/>
+          <path d="M130 80 Q170 80 170 45 Q170 15 210 15" fill="none" stroke="#42506b" stroke-width="2.5" stroke-dasharray="5 5"/>
+          <text x="215" y="19" font-family="JetBrains Mono" font-size="11" fill="#42506b">backtrack here</text>
+          <text x="170" y="105" font-family="JetBrains Mono" font-size="11" fill="#42506b">deep first, ask questions later</text>
+        </svg>
+        <figcaption>DFS commits to a branch completely before trying the next one.</figcaption>
+      </figure>
+      <h3><span class="n">B</span>Why it is dangerous</h3>
+      <ul>
+        <li><b>Not complete:</b> in an infinite tree, or in a graph with cycles and no explored set, DFS can descend forever and never try the other branches.</li>
+        <li><b>Not optimal:</b> it can return a deep, expensive goal while a shallow, cheap one waits on another branch.</li>
+        <li><b>Time O(b^m):</b> terrible when m is much larger than d.</li>
+      </ul>
+      <h3><span class="n">C</span>Why we still love it</h3>
+      <p>Memory. DFS stores only the current path plus unexpanded siblings: <b>O(b·m)</b>. For b = 10 and m = 12 that is about 120 nodes, where BFS would hold 10<sup>12</sup>. DFS is also the skeleton of backtracking search, constraint solvers, and many graph algorithms.</p>
+      <div class="tip"><b>Variant:</b> backtracking search generates one child at a time and edits the state in place, shrinking memory toward O(m).</div>
+      <h3><span class="n">D</span>Watch it dive</h3>
+      <p>In the lab, DFS charges A → B → D → H and only then starts coming back up. Notice how the goal K is found much later than the frontier ever gets near the right side.</p>
+    </div>
+    <div class="sticky-viz"><div id="vizDfs"></div></div>
+  </div>
+</section>
+
+<!-- ================= DLS ================= -->
+<section class="page" id="page-dls" style="--acc:var(--blue)">
+  <div class="page-pills">
+    <a href="#" data-page="bfs">01 BFS</a><a href="#" data-page="dfs">02 DFS</a><a href="#" data-page="dls" class="cur">03 DLS</a><a href="#" data-page="ids">04 IDS</a>
+  </div>
+  <div class="algo-head reveal">
+    <div class="big-num">03</div>
+    <div>
+      <span class="kicker">DFS + a safety rail</span>
+      <h2>Depth Limited Search</h2>
+      <p class="tag">DFS with a depth limit l. Nodes at depth l are treated as if they had no children, so the search can never fall down an infinite hole.</p>
+      <div class="verdicts">
+        <span class="vchip mid">COMPLETE: ONLY IF l ≥ d</span><span class="vchip no">OPTIMAL: NO</span><span class="vchip mid">TIME: O(b^l)</span><span class="vchip ok">SPACE: O(b·l)</span>
+      </div>
+    </div>
+  </div>
+  <div class="lesson">
+    <div class="prose">
+      <h3><span class="n">A</span>The two different failures</h3>
+      <p>DLS is the first strategy that can report two distinct non answers, and the difference matters:</p>
+      <ul>
+        <li><b>FAILURE</b> means: I searched this entire subtree and there is definitely no solution in it.</li>
+        <li><b>CUTOFF</b> means: I stopped because I hit the depth limit. A solution might still exist deeper.</li>
+      </ul>
+      <pre class="code"><button class="copy-btn" data-copy="dlsCode">copy</button><code id="dlsCode">DLS(node, goal, limit):
+  <span class="kw">if</span> node is goal → return SOLUTION
+  <span class="kw">else if</span> limit = 0 → return CUTOFF
+  <span class="kw">else</span>:
+    cutoff_occurred ← false
+    <span class="kw">for each</span> child of node:
+      result ← DLS(child, goal, limit − 1)
+      <span class="kw">if</span> result = CUTOFF → cutoff_occurred ← true
+      <span class="kw">else if</span> result ≠ FAILURE → return result
+    return CUTOFF <span class="kw">if</span> cutoff_occurred <span class="kw">else</span> FAILURE</code></pre>
+      <h3><span class="n">B</span>The guessing problem</h3>
+      <p>If the limit is smaller than the true goal depth d, DLS misses the solution. If the limit is far too large, it degenerates back into slow DFS. Sometimes domain knowledge helps: on a map of 20 cities, a simple path never needs more than 19 moves, so l = 19 is safe. The <b>diameter</b> of the state space (longest shortest path between any two states) is the natural choice. Usually, though, you simply do not know d.</p>
+      <div class="note"><b>Try it in the lab:</b> set the limit to 0, 1, 2 and watch the search get CUTOFF after CUTOFF. Then set it to 3 and watch it finally reach the goal K, which lives at depth 3.</div>
+    </div>
+    <div class="sticky-viz"><div id="vizDls"></div></div>
+  </div>
+</section>
+
+<!-- ================= IDS ================= -->
+<section class="page" id="page-ids" style="--acc:var(--teal)">
+  <div class="page-pills">
+    <a href="#" data-page="bfs">01 BFS</a><a href="#" data-page="dfs">02 DFS</a><a href="#" data-page="dls">03 DLS</a><a href="#" data-page="ids" class="cur">04 IDS</a>
+  </div>
+  <div class="algo-head reveal">
+    <div class="big-num">04</div>
+    <div>
+      <span class="kicker">Repeated DLS, limits 0, 1, 2, ...</span>
+      <h2>Iterative Deepening Search</h2>
+      <p class="tag">Do not guess the limit. Try them all. Run DLS with limit 0, then 1, then 2, and so on until a goal appears. BFS guarantees, DFS memory.</p>
+      <div class="verdicts">
+        <span class="vchip ok">COMPLETE: YES*</span><span class="vchip ok">OPTIMAL: YES (unit costs)</span><span class="vchip mid">TIME: O(b^d)</span><span class="vchip ok">SPACE: O(b·d)</span>
+      </div>
+    </div>
+  </div>
+  <div class="lesson">
+    <div class="prose">
+      <h3><span class="n">A</span>"But is it not wasteful?"</h3>
+      <p>Yes, nodes near the root get re expanded every iteration. But the waste is small because <b>most nodes live at the bottom level</b>. With b = 10 and d = 5:</p>
+      <ul>
+        <li>BFS generates about <b>111,111</b> nodes.</li>
+        <li>IDS generates about <b>123,456</b> nodes.</li>
+        <li>Overhead: roughly <b>11%</b>, and it shrinks as b grows.</li>
+      </ul>
+      <p>The nodes at depth d are generated once, depth d−1 twice, and so on. The giant last level dominates the sum.</p>
+      <figure class="fig-box">
+        <svg viewBox="0 0 300 110" width="100%">
+          <text x="20" y="30" font-family="JetBrains Mono" font-size="12" fill="#182236" font-weight="700">l=0: A</text>
+          <text x="20" y="55" font-family="JetBrains Mono" font-size="12" fill="#182236" font-weight="700">l=1: A B C</text>
+          <text x="20" y="80" font-family="JetBrains Mono" font-size="12" fill="#182236" font-weight="700">l=2: A B D E C F G</text>
+          <path d="M200 78 C240 78 250 30 205 26" fill="none" stroke="#0f8b8d" stroke-width="3" stroke-linecap="round"/>
+          <polygon points="200,26 212,20 210,33" fill="#0f8b8d"/>
+          <text x="238" y="58" font-family="JetBrains Mono" font-size="10" fill="#0f8b8d">repeat deeper</text>
+        </svg>
+        <figcaption>Each pass restarts from the root with a longer leash.</figcaption>
+      </figure>
+      <h3><span class="n">B</span>The verdict</h3>
+      <p>IDS is the <b>default choice for uninformed search</b> when the space is large and the solution depth is unknown. It is complete, optimal for unit costs, and needs only linear memory. Watch the total expansion counter in the lab climb across iterations. That is the price, and it is a bargain.</p>
+      <div class="tip"><b>Exam line to remember:</b> "IDS gives BFS completeness and optimality at DFS memory cost, with only a constant factor of extra node generation."</div>
+    </div>
+    <div class="sticky-viz"><div id="vizIds"></div></div>
+  </div>
+</section>
+
+<!-- ================= MAZE PLAYGROUND ================= -->
+<section class="page" id="page-maze">
+  <div class="sec-head reveal">
+    <span class="kicker">Hands on lab</span>
+    <h2>Maze Playground</h2>
+    <p>Draw walls, pick a strategy, and watch the frontier crawl through the grid. Then scroll down and make BFS, DFS and IDS race on the same maze.</p>
+  </div>
+
+  <div class="card maze-layout reveal">
+    <div class="toolbar">
+      <button class="tool on" data-tool="wall">🧱 Draw wall</button>
+      <button class="tool" data-tool="erase">🧽 Erase</button>
+      <button class="tool" data-tool="start">🟢 Move start</button>
+      <button class="tool" data-tool="goal">🎯 Move goal</button>
+      <span style="width:12px"></span>
+      <button class="btn small" id="btnNewMaze">↻ New maze</button>
+      <button class="btn small" id="btnOpen">Open field</button>
+      <button class="btn small" id="btnScatter">Scatter rocks</button>
+    </div>
+    <div class="maze-wrap">
+      <canvas id="mazeCanvas" width="570" height="330"></canvas>
+      <div class="side-panel">
+        <label style="font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--ink2)">Algorithm</label>
+        <select id="algoSelect">
+          <option value="bfs">BFS · breadth first</option>
+          <option value="dfs">DFS · depth first</option>
+          <option value="ids">IDS · iterative deepening</option>
+        </select>
+        <label style="font-family:var(--mono);font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--ink2)">Speed</label>
+        <input type="range" id="speedRange" min="1" max="25" value="6">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn small solid" id="btnRun">▶ Run</button>
+          <button class="btn small" id="btnStep">Step</button>
+          <button class="btn small" id="btnClearSearch">Clear search</button>
+        </div>
+        <div class="stat"><span>nodes expanded</span><b id="statExp">0</b></div>
+        <div class="stat"><span>max frontier size</span><b id="statFront">0</b></div>
+        <div class="stat"><span>path length</span><b id="statPath">?</b></div>
+        <div class="stat"><span>status</span><b id="statStatus" style="font-size:.85rem">ready to run</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sec-head reveal" style="margin-top:56px">
+    <span class="kicker">Head to head</span>
+    <h2>The Race: BFS vs DFS vs IDS</h2>
+    <p>All three start at the same moment on a copy of your current maze. Fewest expansions to reach the goal wins the crown. DFS sometimes wins on pure luck. Watch it happen.</p>
+  </div>
+  <div class="card reveal">
+    <div class="toolbar">
+      <button class="btn solid" id="btnRace">🏁 Start race</button>
+      <button class="btn" id="btnRaceReset">Reset race</button>
+      <span id="raceStatus" style="font-family:var(--mono);font-size:.8rem;color:var(--ink2)">waiting at the starting line</span>
+    </div>
+    <div class="race-grid" id="raceGrid"></div>
+  </div>
+</section>
+
+<!-- ================= COMPARE ================= -->
+<section class="page" id="page-compare">
+  <div class="sec-head reveal">
+    <span class="kicker">Side by side</span>
+    <h2>Compare the four strategies</h2>
+    <p>The table, an interactive node budget calculator, a quick quiz, and a cheat sheet for choosing the right tool.</p>
+  </div>
+
+  <div class="cmp-table-wrap reveal">
+    <table class="cmp">
+      <thead><tr><th>Criterion</th><th>BFS<small>queue</small></th><th>DFS<small>stack</small></th><th>DLS<small>stack + limit</small></th><th>IDS<small>repeated DLS</small></th></tr></thead>
+      <tbody>
+        <tr><th>Expands first</th><td>shallowest node</td><td>deepest node</td><td>deepest under limit</td><td>like BFS, in passes</td></tr>
+        <tr><th>Complete?</th><td><span class="yes">Yes*</span></td><td><span class="no">No</span></td><td><span class="mid">Only if l ≥ d</span></td><td><span class="yes">Yes*</span></td></tr>
+        <tr><th>Optimal?</th><td><span class="mid">Unit costs only</span></td><td><span class="no">No</span></td><td><span class="no">No</span></td><td><span class="mid">Unit costs only</span></td></tr>
+        <tr><th>Time</th><td class="mono">O(b^d)</td><td class="mono">O(b^m)</td><td class="mono">O(b^l)</td><td class="mono">O(b^d)</td></tr>
+        <tr><th>Space</th><td class="mono">O(b^d) 😱</td><td class="mono">O(b·m) 👍</td><td class="mono">O(b·l) 👍</td><td class="mono">O(b·d) 👍</td></tr>
+        <tr><th>Best when</th><td>solutions are shallow, memory is fine</td><td>solutions are deep and plentiful</td><td>you know a good bound on depth</td><td>large space, unknown depth</td></tr>
+        <tr><th>Weakness</th><td>memory explodes</td><td>loops, dead dives, suboptimal</td><td>a bad limit misses or wastes</td><td>repeats upper levels (~11%)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="reveal" style="font-size:.85rem;color:var(--ink2);margin-top:8px">* assuming a finite branching factor b. Hover any row to highlight it.</p>
+
+  <div class="calc reveal">
+    <div class="card sliders">
+      <h3 style="font-size:1.3rem">🧮 Node budget calculator</h3>
+      <label>branching factor b <span class="val" id="cbBv">10</span></label>
+      <input type="range" id="cbB" min="2" max="10" value="10">
+      <label>goal depth d <span class="val" id="cbDv">5</span></label>
+      <input type="range" id="cbD" min="1" max="7" value="5">
+      <label>max depth m (for DFS worst case) <span class="val" id="cbMv">9</span></label>
+      <input type="range" id="cbM" min="1" max="14" value="9">
+      <p id="calcSentence" style="margin-top:18px;font-size:.92rem"></p>
+    </div>
+    <div class="card">
+      <h3 style="font-size:1.15rem;margin-bottom:16px">Nodes generated (log scale bars)</h3>
+      <div class="bar-row"><div class="bar-top"><span>BFS</span><b id="valBfs"></b></div><div class="bar"><i id="fillBfs" style="background:var(--amber)"></i></div></div>
+      <div class="bar-row"><div class="bar-top"><span>IDS</span><b id="valIds"></b></div><div class="bar"><i id="fillIds" style="background:var(--teal)"></i></div></div>
+      <div class="bar-row"><div class="bar-top"><span>DFS worst case</span><b id="valDfs"></b></div><div class="bar"><i id="fillDfs" style="background:var(--coral)"></i></div></div>
+      <h3 style="font-size:1.15rem;margin:22px 0 16px">Memory: max nodes stored at once</h3>
+      <div class="bar-row"><div class="bar-top"><span>BFS frontier: b^d</span><b id="memBfsV"></b></div><div class="bar"><i id="memBfs" style="background:var(--amber)"></i></div></div>
+      <div class="bar-row"><div class="bar-top"><span>DFS stack: b·m</span><b id="memDfsV"></b></div><div class="bar"><i id="memDfs" style="background:var(--coral)"></i></div></div>
+      <div class="bar-row"><div class="bar-top"><span>IDS stack: b·d</span><b id="memIdsV"></b></div><div class="bar"><i id="memIds" style="background:var(--teal)"></i></div></div>
+      <div class="vchip mid" id="overheadChip" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <div class="sec-head reveal" style="margin-top:60px"><span class="kicker">Which one, when?</span><h2>Decision cheat sheet</h2></div>
+  <div class="grid4 reveal">
+    <div class="card" style="border-top:9px solid var(--amber)"><h3 style="font-size:1.1rem">Shallow goal + plenty of RAM?</h3><p style="font-size:.9rem;color:var(--ink2);margin-top:6px">Use <b>BFS</b>. You get the fewest steps solution and you will not regret it until the memory bill arrives.</p></div>
+    <div class="card" style="border-top:9px solid var(--coral)"><h3 style="font-size:1.1rem">Tiny memory + solutions are deep?</h3><p style="font-size:.9rem;color:var(--ink2);margin-top:6px">Use <b>DFS</b>, ideally with an explored set and a backup plan for when it dives into a swamp.</p></div>
+    <div class="card" style="border-top:9px solid var(--blue)"><h3 style="font-size:1.1rem">You know a safe depth bound?</h3><p style="font-size:.9rem;color:var(--ink2);margin-top:6px">Use <b>DLS</b> with that bound, for example the diameter of a small map.</p></div>
+    <div class="card" style="border-top:9px solid var(--teal)"><h3 style="font-size:1.1rem">Big space, depth unknown?</h3><p style="font-size:.9rem;color:var(--ink2);margin-top:6px">Use <b>IDS</b>. It is the standard answer to "which blind search should I pick?"</p></div>
+  </div>
+
+  <div class="sec-head reveal" style="margin-top:60px"><span class="kicker">Check yourself</span><h2>Quick quiz <span class="vchip ok" id="scoreChip">score 0 / 7</span></h2></div>
+  <div id="quizBox" class="reveal"></div>
+</section>
+
+<!-- ================= GLOSSARY ================= -->
+<section class="page" id="page-glossary">
+  <div class="sec-head reveal">
+    <span class="kicker">Vocabulary</span>
+    <h2>Glossary</h2>
+    <p>Every term used on this site, in plain words. Type to filter.</p>
+  </div>
+  <input class="gloss-search reveal" id="glossSearch" type="text" placeholder="🔍 Search terms, e.g. frontier, cutoff, heuristic...">
+  <div class="gloss-grid" id="glossGrid"></div>
+</section>
+
+<footer>
+  <div class="foot-in">
+    <div>
+      <b style="font-family:var(--disp)">Blind Search Lab</b>
+      <p style="font-size:.9rem;max-width:34em">A study companion for uninformed search: BFS, DFS, DLS and IDS, with live visualizations. Next stop on your journey: informed search with heuristics, greedy best first, and A*.</p>
+      <p class="fm">built with plain HTML, CSS and JS · no libraries</p>
+    </div>
+    <div>
+      <b>Jump to</b>
+      <p style="margin-top:6px">
+        <a href="#" data-page="bfs">BFS</a> · <a href="#" data-page="dfs">DFS</a> · <a href="#" data-page="dls">DLS</a> · <a href="#" data-page="ids">IDS</a><br>
+        <a href="#" data-page="maze">Playground</a> · <a href="#" data-page="compare">Compare</a> · <a href="#" data-page="glossary">Glossary</a>
+      </p>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ============================================================
+   ROUTER
+============================================================ */
+const pages = ['home','bfs','dfs','dls','ids','maze','compare','glossary'];
+const vizes = {};
+let started = {};
+
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const pg = document.getElementById('page-'+name);
+  if(pg) pg.classList.add('active');
+  document.querySelectorAll('.nav-links a').forEach(a=>{
+    a.classList.toggle('active', a.dataset.page===name);
+  });
+  Object.values(vizes).forEach(v=>v.pause());
+  window.scrollTo({top:0});
+  // staggered reveal
+  pg.querySelectorAll('.reveal').forEach((el,i)=>{
+    el.classList.remove('in');
+    setTimeout(()=>el.classList.add('in'), Math.min(i*70, 500));
+  });
+  // lazy init
+  if(!started[name]){ started[name]=true; initPage(name); }
+  if(vizes[name]) setTimeout(()=>vizes[name].play(), 500);
+  document.getElementById('navLinks').classList.remove('open');
+  document.getElementById('ddItem').classList.remove('open');
+}
+
+document.addEventListener('click', e=>{
+  const t = e.target.closest('[data-page]');
+  if(t){ e.preventDefault(); showPage(t.dataset.page); }
+});
+document.getElementById('burger').onclick = ()=>document.getElementById('navLinks').classList.toggle('open');
+document.getElementById('ddToggle').onclick = ()=>document.getElementById('ddItem').classList.toggle('open');
+
+function initPage(name){
+  if(name==='home') startHero();
+  if(name==='bfs') vizes.bfs = makeViz('vizBfs','bfs',{});
+  if(name==='dfs') vizes.dfs = makeViz('vizDfs','dfs',{});
+  if(name==='dls') vizes.dls = makeViz('vizDls','dls',{limit:2});
+  if(name==='ids') vizes.ids = makeViz('vizIds','ids',{});
+  if(name==='maze') initMaze();
+  if(name==='compare'){ initCalc(); initQuiz(); }
+  if(name==='glossary') renderGlossary();
+}
+
+/* copy buttons */
+document.addEventListener('click', e=>{
+  const b = e.target.closest('.copy-btn');
+  if(!b) return;
+  const txt = document.getElementById(b.dataset.copy).innerText;
+  navigator.clipboard && navigator.clipboard.writeText(txt);
+  b.textContent='copied!'; setTimeout(()=>b.textContent='copy',1200);
+});
+
+/* ticker duplicate for seamless loop */
+document.getElementById('tickerTrack').innerHTML += document.getElementById('tickerTrack').innerHTML;
+
+/* ============================================================
+   TREE DATA + FRAME BUILDER
+============================================================ */
+const GOAL='K';
+const TREE = {
+  A:{x:380,y:46,ch:['B','C']},
+  B:{x:195,y:140,ch:['D','E']},
+  C:{x:565,y:140,ch:['F','G']},
+  D:{x:85,y:240,ch:['H','I']},
+  E:{x:235,y:240,ch:['J']},
+  F:{x:480,y:240,ch:['K']},
+  G:{x:655,y:240,ch:['L','M']},
+  H:{x:45,y:340,ch:[]}, I:{x:125,y:340,ch:[]}, J:{x:235,y:340,ch:[]},
+  K:{x:480,y:340,ch:[]}, L:{x:615,y:340,ch:[]}, M:{x:695,y:340,ch:[]}
+};
+const PARENT={B:'A',C:'A',D:'B',E:'B',F:'C',G:'C',H:'D',I:'D',J:'E',K:'F',L:'G',M:'G'};
+
+function buildFrames(strategy, opts={}){
+  const frames=[];
+  let frontier=[], explored=[], cutoffs=[], order=[], found=false, totalExp=0, iteration=1;
+  const snap=(o={})=>frames.push({
+    frontier:frontier.map(x=>typeof x==='object'?x.id:x),
+    explored:[...explored], cutoffs:[...cutoffs], order:[...order],
+    found, iteration, totalExp, ...o
+  });
+
+  function runDLS(limit, isIDS){
+    frontier=[{id:'A',d:0}];
+    let cutoffHit=false;
+    snap({current:null,msg:(isIDS?`Iteration ${iteration}: fresh start, depth limit = ${limit}.`:`Depth limit set to ${limit}. Root A goes on the stack.`)});
+    while(frontier.length && !found){
+      const {id,d}=frontier.pop();
+      snap({current:id,msg:`Pop ${id} (depth ${d}) from the TOP of the stack and test it.`});
+      if(id===GOAL){found=true; snap({msg:`${id} passes the goal test. Solution found!`}); break;}
+      if(d>=limit){
+        cutoffs.push(id); cutoffHit=true;
+        snap({msg:`${id} sits at the depth limit. CUTOFF: treat it as having no children.`});
+        continue;
+      }
+      explored.push(id); order.push(id); totalExp++;
+      const kids=TREE[id].ch;
+      for(let i=kids.length-1;i>=0;i--) frontier.push({id:kids[i],d:d+1});
+      snap({msg: kids.length?`Expand ${id}. Push ${kids.join(', ')} at depth ${d+1}.`:`${id} is a leaf. Dead end, backtrack.`});
+    }
+    if(!found){
+      snap({msg: cutoffHit?`Frontier empty. Result: CUTOFF. A solution might still hide deeper than ${limit}.`
+                           :`Frontier empty. Result: FAILURE. No solution exists inside this limit.`});
+    }
+    return cutoffHit;
+  }
+
+  if(strategy==='bfs'){
+    frontier=['A'];
+    snap({msg:'Start. The root A is the only node in the queue.'});
+    while(frontier.length && !found){
+      const n=frontier.shift();
+      snap({current:n,msg:`Take ${n} from the FRONT of the queue and run the goal test.`});
+      if(n===GOAL){found=true; snap({msg:`${n} is the GOAL! Solution path highlighted in green.`}); break;}
+      explored.push(n); order.push(n); totalExp++;
+      const kids=TREE[n].ch;
+      frontier.push(...kids);
+      snap({msg: kids.length?`Expand ${n}. Add ${kids.join(', ')} to the BACK of the queue.`:`${n} is a leaf. Nothing to expand.`});
+    }
+  }
+  else if(strategy==='dfs'){
+    frontier=['A'];
+    snap({msg:'Start. The root A is alone on the stack.'});
+    while(frontier.length && !found){
+      const n=frontier.pop();
+      snap({current:n,msg:`Take ${n} from the TOP of the stack and run the goal test.`});
+      if(n===GOAL){found=true; snap({msg:`${n} is the GOAL! Notice how deep the search went to get here.`}); break;}
+      explored.push(n); order.push(n); totalExp++;
+      const kids=TREE[n].ch;
+      for(let i=kids.length-1;i>=0;i--) frontier.push(kids[i]);
+      snap({msg: kids.length?`Expand ${n}. Push children so ${kids[0]} lands on top and gets explored next.`:`${n} is a leaf. Dead end, backtrack!`});
+    }
+  }
+  else if(strategy==='dls'){
+    runDLS(opts.limit ?? 2, false);
+  }
+  else if(strategy==='ids'){
+    for(let lim=0; lim<=6 && !found; lim++){
+      iteration=lim+1;
+      frontier=[]; explored=[]; cutoffs=[]; order=[];
+      const cut=runDLS(lim,true);
+      if(found) break;
+      if(lim<6) snap({msg:`Iteration ${iteration} ended in CUTOFF. Increase the limit to ${lim+1} and search again from the root.`});
+    }
+  }
+  return frames;
+}
+
+/* ============================================================
+   TREE VISUALIZER FACTORY
+============================================================ */
+function makeViz(hostId, strategy, opts){
+  const host=document.getElementById(hostId);
+  let frames=buildFrames(strategy,opts), idx=0, timer=null, speed=5;
+  const stratLabel={bfs:'BFS · queue',dfs:'DFS · stack',dls:'DLS · stack + limit',ids:'IDS · repeated DLS'}[strategy];
+
+  host.innerHTML=`
+    <div class="viz">
+      <div class="viz-head"><b>🌳 LIVE TREE LAB</b><span class="viz-badge">${stratLabel}</span></div>
+      <svg viewBox="0 0 760 400" class="vizsvg"></svg>
+      <div class="viz-msg"><span class="vizmsg">Press play or step through.</span></div>
+      <div class="viz-panels">
+        <div class="viz-panel"><h5>Frontier · <span class="ftype"></span></h5><div class="chips-row vizchips"></div></div>
+        <div class="viz-panel"><h5>Expansion order</h5><div class="order-txt vizorder"></div></div>
+      </div>
+      ${strategy==='dls'?`<div class="limit-row"><span class="lab">depth limit l</span>
+        ${[0,1,2,3,4].map(l=>`<button class="lbtn ${l===(opts.limit??2)?'on':''}" data-l="${l}">${l}</button>`).join('')}
+        <span class="edge-label" style="margin-left:auto">goal K lives at depth 3</span></div>`:''}
+      <div class="viz-controls">
+        <button class="vbtn vrst">⏮ Reset</button>
+        <button class="vbtn vback">◀ Back</button>
+        <button class="vbtn play vplay">▶ Play</button>
+        <button class="vbtn vfwd">Step ▶</button>
+        <div class="viz-meta">
+          <span class="meta-chip vstepc"></span>
+          <span class="meta-chip vexp"></span>
+          ${strategy==='ids'?'<span class="meta-chip viter"></span>':''}
+        </div>
+      </div>
+    </div>`;
+
+  const svg=host.querySelector('.vizsvg');
+  const NS='http://www.w3.org/2000/svg';
+  const el=(t,at)=>{const e=document.createElementNS(NS,t);for(const k in at)e.setAttribute(k,at[k]);return e;};
+
+  // level guides
+  [46,140,240,340].forEach((y,i)=>{
+    svg.appendChild(el('line',{x1:20,x2:740,y1:y,y2:y,class:'lvl'}));
+    const t=el('text',{x:748,y:y+3,class:'lvltxt','text-anchor':'end'}); t.textContent='d='+i; svg.appendChild(t);
+  });
+  // edges
+  const edgeMap={};
+  for(const id in TREE) TREE[id].ch.forEach(c=>{
+    const ln=el('line',{x1:TREE[id].x,y1:TREE[id].y,x2:TREE[c].x,y2:TREE[c].y,class:'edge'});
+    svg.appendChild(ln); edgeMap[id+'-'+c]=ln;
+  });
+  // nodes
+  const nodeMap={};
+  for(const id in TREE){
+    const g=el('g',{class:'node'});
+    g.appendChild(el('circle',{cx:TREE[id].x,cy:TREE[id].y,r:21,class:'body'}));
+    if(id===GOAL) g.appendChild(el('circle',{cx:TREE[id].x,cy:TREE[id].y,r:28,class:'goalring'}));
+    const t=el('text',{x:TREE[id].x,y:TREE[id].y}); t.textContent=id; g.appendChild(t);
+    if(id===GOAL){ const tag=el('text',{x:TREE[id].x,y:TREE[id].y+44,class:'goaltag'}); tag.textContent='★ GOAL'; g.appendChild(tag); }
+    svg.appendChild(g); nodeMap[id]=g;
+  }
+
+  const q=sel=>host.querySelector(sel);
+  q('.ftype').textContent = (strategy==='bfs')?'FIFO queue: front → back':'LIFO stack: top is last';
+
+  function render(){
+    const f=frames[idx];
+    for(const id in nodeMap){
+      nodeMap[id].setAttribute('class','node');
+    }
+    f.explored.forEach(id=>nodeMap[id].classList.add('done'));
+    f.frontier.forEach(id=>nodeMap[id].classList.add('front'));
+    f.cutoffs.forEach(id=>nodeMap[id].classList.add('cut'));
+    if(f.current) nodeMap[f.current].classList.add('cur');
+    if(f.found) nodeMap[GOAL].classList.add('win');
+    for(const k in edgeMap) edgeMap[k].classList.remove('path');
+    if(f.found){ ['A-C','C-F','F-K'].forEach(k=>edgeMap[k].classList.add('path')); }
+    // chips
+    const chips=q('.vizchips'); chips.innerHTML='';
+    if(!f.frontier.length){ chips.innerHTML='<span class="edge-label">empty</span>'; }
+    f.frontier.forEach((id,i)=>{
+      const c=document.createElement('span'); c.className='fchip'; c.textContent=id;
+      if(strategy!=='bfs' && i===f.frontier.length-1) c.style.background='var(--coral)';
+      chips.appendChild(c);
+    });
+    q('.vizorder').textContent=(f.order.join(' → ')+(f.found?' → ★':''))||'(none yet)';
+    const msg=q('.vizmsg'); msg.textContent=f.msg; msg.classList.remove('pop'); void msg.offsetWidth; msg.classList.add('pop');
+    q('.vstepc').textContent=`step ${idx+1} / ${frames.length}`;
+    q('.vexp').textContent=`expansions: ${f.totalExp}`;
+    if(strategy==='ids') q('.viter').textContent=`iteration ${f.iteration}`;
+    q('.vback').disabled = idx===0;
+    q('.vfwd').disabled = idx===frames.length-1;
+  }
+
+  const api={
+    play(){ if(idx>=frames.length-1){idx=0;} render(); timer=setInterval(()=>{ if(idx<frames.length-1){idx++;render();} else api.pause(); }, 950-speed*80); q('.vplay').textContent='⏸ Pause'; },
+    pause(){ clearInterval(timer); timer=null; q('.vplay').textContent='▶ Play'; },
+    step(n=1){ api.pause(); idx=Math.max(0,Math.min(frames.length-1,idx+n)); render(); }
+  };
+  q('.vplay').onclick=()=> timer?api.pause():api.play();
+  q('.vfwd').onclick=()=>api.step(1);
+  q('.vback').onclick=()=>api.step(-1);
+  q('.vrst').onclick=()=>{api.pause(); idx=0; render();};
+  host.querySelectorAll('.lbtn').forEach(b=>b.onclick=()=>{
+    host.querySelectorAll('.lbtn').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    api.pause();
+    frames=buildFrames('dls',{limit:+b.dataset.l}); idx=0; render();
+  });
+  render();
+  return api;
+}
+
+/* ============================================================
+   GRID SOLVER (maze)
+============================================================ */
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+function genMaze(cols,rows){
+  const g=Array.from({length:rows},()=>Array(cols).fill(1));
+  (function carve(r,c){
+    g[r][c]=0;
+    for(const [dr,dc] of shuffle([[0,2],[0,-2],[2,0],[-2,0]])){
+      const nr=r+dr,nc=c+dc;
+      if(nr>0&&nr<rows-1&&nc>0&&nc<cols-1&&g[nr][nc]===1){ g[r+dr/2][c+dc/2]=0; carve(nr,nc); }
+    }
+  })(1,1);
+  // knock a few extra walls to create loops
+  for(let k=0;k<6;k++){
+    const r=1+2*Math.floor(Math.random()*((rows-2)/2)), c=1+2*Math.floor(Math.random()*((cols-2)/2));
+    const dirs=shuffle([[0,1],[0,-1],[1,0],[-1,0]]);
+    const [dr,dc]=dirs[0]; const nr=r+dr,nc=c+dc;
+    if(nr>0&&nr<rows-1&&nc>0&&nc<cols-1&&g[nr][nc]===0) g[nr][nc]=0;
+  }
+  return g;
+}
+function solvable(grid,s,g){
+  const rows=grid.length,cols=grid[0].length,k=(r,c)=>r+','+c;
+  const seen=new Set([k(s[0],s[1])]),q=[[s[0],s[1]]];
+  while(q.length){
+    const [r,c]=q.shift();
+    if(r===g[0]&&c===g[1]) return true;
+    for(const [dr,dc] of [[-1,0],[0,1],[1,0],[0,-1]]){
+      const nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&grid[nr][nc]===0&&!seen.has(k(nr,nc))){seen.add(k(nr,nc));q.push([nr,nc]);}
+    }
+  }
+  return false;
+}
+
+class GridSolver{
+  constructor(grid,algo,start,goal){ this.setup(grid,algo,start,goal); }
+  setup(grid,algo,start,goal){
+    this.grid=grid; this.algo=algo; this.start=start; this.goal=goal;
+    this.expanded=0; this.maxFrontier=0; this.done=false; this.found=false;
+    this.path=[]; this.last=null; this.iteration=1; this.limit=0;
+    this.k=(r,c)=>r+','+c;
+    this.beginIteration();
+  }
+  beginIteration(){
+    this.visited=new Set(); this.frontier=[]; this.parent=new Map();
+    const [sr,sc]=this.start;
+    this.visited.add(this.k(sr,sc)); this.parent.set(this.k(sr,sc),null);
+    this.frontier.push(this.algo==='ids'?[sr,sc,0]:[sr,sc]);
+    this.maxFrontier=Math.max(this.maxFrontier,this.frontier.length);
+  }
+  neighbors(r,c){
+    const rows=this.grid.length,cols=this.grid[0].length,out=[];
+    for(const [dr,dc] of [[-1,0],[0,1],[1,0],[0,-1]]){
+      const nr=r+dr,nc=c+dc;
+      if(nr>=0&&nr<rows&&nc>=0&&nc<cols&&this.grid[nr][nc]===0) out.push([nr,nc]);
+    }
+    return out;
+  }
+  step(){
+    if(this.done) return 'done';
+    if(!this.frontier.length){
+      if(this.algo==='ids'){
+        this.limit++; this.iteration++;
+        if(this.limit>80){this.done=true;return 'done';}
+        this.beginIteration(); return 'iter';
+      }
+      this.done=true; return 'done';
+    }
+    let cell,depth=0;
+    if(this.algo==='bfs') cell=this.frontier.shift();
+    else if(this.algo==='dfs') cell=this.frontier.pop();
+    else { const e=this.frontier.pop(); cell=[e[0],e[1]]; depth=e[2]; }
+    this.last=cell; this.expanded++;
+    const [r,c]=cell;
+    if(r===this.goal[0]&&c===this.goal[1]){ this.done=true; this.found=true; this.buildPath(); return 'done'; }
+    if(this.algo==='ids' && depth>=this.limit) return 'ok';
+    for(const [nr,nc] of this.neighbors(r,c)){
+      const key=this.k(nr,nc);
+      if(this.visited.has(key)) continue;
+      this.visited.add(key); this.parent.set(key,this.k(r,c));
+      this.frontier.push(this.algo==='ids'?[nr,nc,depth+1]:[nr,nc]);
+    }
+    this.maxFrontier=Math.max(this.maxFrontier,this.frontier.length);
+    return 'ok';
+  }
+  buildPath(){
+    let cur=this.k(this.goal[0],this.goal[1]); this.path=[];
+    while(cur){ const [r,c]=cur.split(',').map(Number); this.path.push([r,c]); cur=this.parent.get(cur); }
+    this.path.reverse();
+  }
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  if(ctx.roundRect){ctx.roundRect(x,y,w,h,r);}else{ctx.rect(x,y,w,h);}
+  ctx.fill();
+}
+function drawGrid(ctx,grid,solver,cs,robot){
+  const rows=grid.length,cols=grid[0].length;
+  ctx.clearRect(0,0,cols*cs,rows*cs);
+  ctx.fillStyle='#fbf8ef'; ctx.fillRect(0,0,cols*cs,rows*cs);
+  const frontSet=new Set(), pathSet=new Set();
+  if(solver){
+    solver.frontier.forEach(e=>frontSet.add(e[0]+','+e[1]));
+    solver.path.forEach(([r,c])=>pathSet.add(r+','+c));
+  }
+  for(let r=0;r<rows;r++)for(let c=0;c<cols;c++){
+    const key=r+','+c,x=c*cs,y=r*cs;
+    if(grid[r][c]===1){ ctx.fillStyle='#182236'; roundRect(ctx,x+1,y+1,cs-2,cs-2,4); continue; }
+    if(!solver) continue;
+    if(pathSet.has(key)){ ctx.fillStyle='#2f9e44'; roundRect(ctx,x+1,y+1,cs-2,cs-2,5); }
+    else if(frontSet.has(key)){ ctx.fillStyle='#f2a516'; roundRect(ctx,x+2,y+2,cs-4,cs-4,5); }
+    else if(solver.visited.has(key)){ ctx.fillStyle='rgba(45,108,223,.32)'; roundRect(ctx,x+2,y+2,cs-4,cs-4,5); }
+  }
+  if(solver){
+    const [sr,sc]=solver.start,[gr,gc]=solver.goal;
+    ctx.fillStyle='#0f8b8d'; ctx.beginPath(); ctx.arc(sc*cs+cs/2,sr*cs+cs/2,cs*0.36,0,7); ctx.fill();
+    ctx.strokeStyle='#182236'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#e4572e'; ctx.beginPath(); ctx.arc(gc*cs+cs/2,gr*cs+cs/2,cs*0.36,0,7); ctx.fill(); ctx.stroke();
+    if(robot&&solver.last){
+      const [lr,lc]=solver.last;
+      ctx.fillStyle='#fff'; ctx.strokeStyle='#182236'; ctx.lineWidth=2.5;
+      ctx.beginPath(); ctx.arc(lc*cs+cs/2,lr*cs+cs/2,cs*0.24,0,7); ctx.fill(); ctx.stroke();
+    }
+    if(solver.algo==='ids'&&!solver.done){
+      ctx.fillStyle='#182236'; ctx.font=`bold ${Math.max(10,cs*0.55)}px JetBrains Mono`;
+      ctx.fillText('limit '+solver.limit, 6, cs*0.75);
+    }
+  }
+}
+
+/* ============================================================
+   HERO LOOP
+============================================================ */
+let heroStarted=false;
+function startHero(){
+  if(heroStarted) return; heroStarted=true;
+  const cv=document.getElementById('heroCanvas'),ctx=cv.getContext('2d');
+  const cs=30, cols=15, rows=9;
+  cv.width=cols*cs; cv.height=rows*cs;
+  let grid=genMaze(cols,rows), solver=new GridSolver(grid,'bfs',[1,1],[rows-2,cols-2]);
+  let run=1, pauseUntil=0;
+  function tick(t){
+    if(document.getElementById('page-home').classList.contains('active')){
+      if(t>pauseUntil){
+        if(solver.done){
+          pauseUntil=t+1100;
+          grid=genMaze(cols,rows); run++;
+          solver=new GridSolver(grid,'bfs',[1,1],[rows-2,cols-2]);
+          document.getElementById('heroIter').textContent='run '+run;
+        } else {
+          solver.step(); solver.step();
+          document.getElementById('heroCount').textContent='nodes expanded: '+solver.expanded;
+        }
+      }
+      drawGrid(ctx,grid,solver,cs,true);
+    }
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+}
+
+/* ============================================================
+   MAZE PAGE
+============================================================ */
+let mazeInited=false;
+const M={cols:19,rows:11,cs:30};
+function initMaze(){
+  if(mazeInited) return; mazeInited=true;
+  const cv=document.getElementById('mazeCanvas'),ctx=cv.getContext('2d');
+  cv.width=M.cols*M.cs; cv.height=M.rows*M.cs;
+  let grid=genMaze(M.cols,M.rows), start=[1,1], goal=[M.rows-2,M.cols-2];
+  let solver=null, running=false, tool='wall', painting=false;
+
+  function redraw(){ drawGrid(ctx,grid,solver,M.cs,false); updateStats(); }
+  function updateStats(){
+    document.getElementById('statExp').textContent=solver?solver.expanded:0;
+    document.getElementById('statFront').textContent=solver?solver.maxFrontier:0;
+    document.getElementById('statPath').textContent=(solver&&solver.found)?solver.path.length-1:'?';
+    const st=document.getElementById('statStatus');
+    if(!solver){st.textContent='ready to run';}
+    else if(solver.done&&solver.found){st.textContent='goal reached ✓';}
+    else if(solver.done){st.textContent='no path exists';}
+    else if(solver.algo==='ids'){st.textContent='searching, limit '+solver.limit;}
+    else{st.textContent='searching...';}
+  }
+
+  document.querySelectorAll('.tool').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('.tool').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); tool=b.dataset.tool;
+  });
+  function cellFromEvent(e){
+    const rect=cv.getBoundingClientRect();
+    const sx=cv.width/rect.width, sy=cv.height/rect.height;
+    const c=Math.floor((e.clientX-rect.left)*sx/M.cs), r=Math.floor((e.clientY-rect.top)*sy/M.cs);
+    if(r<0||r>=M.rows||c<0||c>=M.cols) return null;
+    return [r,c];
+  }
+  function applyTool(cell){
+    if(!cell) return;
+    const [r,c]=cell;
+    solver=null;
+    if(tool==='wall'){ if(!(r===start[0]&&c===start[1])&&!(r===goal[0]&&c===goal[1])) grid[r][c]=grid[r][c]?0:1; }
+    if(tool==='erase') grid[r][c]=0;
+    if(tool==='start'&&grid[r][c]===0&&!(r===goal[0]&&c===goal[1])) start=[r,c];
+    if(tool==='goal'&&grid[r][c]===0&&!(r===start[0]&&c===start[1])) goal=[r,c];
+    redraw();
+  }
+  cv.addEventListener('pointerdown',e=>{painting=true;applyTool(cellFromEvent(e));cv.setPointerCapture(e.pointerId);});
+  cv.addEventListener('pointermove',e=>{if(painting&&tool!=='start'&&tool!=='goal')applyTool(cellFromEvent(e));});
+  cv.addEventListener('pointerup',()=>painting=false);
+
+  document.getElementById('btnNewMaze').onclick=()=>{grid=genMaze(M.cols,M.rows);start=[1,1];goal=[M.rows-2,M.cols-2];solver=null;redraw();};
+  document.getElementById('btnOpen').onclick=()=>{grid=Array.from({length:M.rows},()=>Array(M.cols).fill(0));solver=null;redraw();};
+  document.getElementById('btnScatter').onclick=()=>{
+    for(let tries=0;tries<40;tries++){
+      const g=Array.from({length:M.rows},(_,r)=>Array.from({length:M.cols},(_,c)=>
+        (r===0||c===0||r===M.rows-1||c===M.cols-1||Math.random()<0.22)?1:0));
+      g[start[0]][start[1]]=0; g[goal[0]][goal[1]]=0;
+      if(solvable(g,start,goal)){grid=g;break;}
+    }
+    solver=null; redraw();
+  };
+  document.getElementById('btnClearSearch').onclick=()=>{solver=null;running=false;document.getElementById('btnRun').textContent='▶ Run';redraw();};
+  document.getElementById('btnStep').onclick=()=>{
+    if(!solver) solver=new GridSolver(grid,document.getElementById('algoSelect').value,start,goal);
+    solver.step(); redraw();
+  };
+  document.getElementById('btnRun').onclick=function(){
+    running=!running;
+    this.textContent=running?'⏸ Pause':'▶ Run';
+    if(running&&!solver) solver=new GridSolver(grid,document.getElementById('algoSelect').value,start,goal);
+  };
+  document.getElementById('algoSelect').onchange=()=>{solver=null;redraw();};
+
+  function loop(){
+    if(document.getElementById('page-maze').classList.contains('active')&&running&&solver&&!solver.done){
+      const k=+document.getElementById('speedRange').value;
+      for(let i=0;i<k&&!solver.done;i++) solver.step();
+      redraw();
+      if(solver.done){ running=false; document.getElementById('btnRun').textContent='▶ Run'; }
+    }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+  redraw();
+
+  /* ---- RACE ---- */
+  const raceGridEl=document.getElementById('raceGrid');
+  const racers=[
+    {algo:'bfs',label:'BFS',color:'var(--amber)'},
+    {algo:'dfs',label:'DFS',color:'var(--coral)'},
+    {algo:'ids',label:'IDS',color:'var(--teal)'}
+  ];
+  racers.forEach(r=>{
+    const div=document.createElement('div'); div.className='racer';
+    div.innerHTML=`<div class="racer-head"><b style="color:${r.color}">${r.label}</b><span class="racer-status mono" style="font-size:.68rem">ready</span></div>
+      <canvas width="${M.cols*16}" height="${M.rows*16}"></canvas>
+      <div class="racer-stats"><span>expanded: <b class="re">0</b></span><span>path: <b class="rp">?</b></span></div>
+      <div class="stamp"><span class="crown"></span><span class="stamptxt"></span></div>`;
+    raceGridEl.appendChild(div);
+    r.canvas=div.querySelector('canvas'); r.ctx=r.canvas.getContext('2d');
+    r.div=div; r.elExp=div.querySelector('.re'); r.elPath=div.querySelector('.rp');
+    r.elStatus=div.querySelector('.racer-status'); r.elCrown=div.querySelector('.crown'); r.elStamp=div.querySelector('.stamptxt');
+  });
+  let raceRunning=false, finishOrder=[];
+  function raceDrawAll(){
+    racers.forEach(r=>{ if(r.grid) drawGrid(r.ctx,r.grid,r.solver,16,false); });
+  }
+  document.getElementById('btnRace').onclick=function(){
+    const base=genMaze(M.cols,M.rows);
+    const s=[1,1], g=[M.rows-2,M.cols-2];
+    finishOrder=[];
+    racers.forEach(r=>{
+      r.grid=base.map(row=>[...row]); r.start=s; r.goal=g;
+      r.solver=new GridSolver(r.grid,r.algo,s,g);
+      r.div.classList.remove('finished'); r.elCrown.textContent=''; r.elStatus.textContent='racing';
+      r.elExp.textContent='0'; r.elPath.textContent='?';
+    });
+    raceRunning=true;
+    document.getElementById('raceStatus').textContent='GO GO GO';
+    this.textContent='🏁 Racing...';
+  };
+  document.getElementById('btnRaceReset').onclick=()=>{
+    raceRunning=false;
+    racers.forEach(r=>{r.grid=null;r.solver=null;r.div.classList.remove('finished');r.elStatus.textContent='ready';r.elExp.textContent='0';r.elPath.textContent='?';r.ctx.clearRect(0,0,r.canvas.width,r.canvas.height);});
+    document.getElementById('btnRace').textContent='🏁 Start race';
+    document.getElementById('raceStatus').textContent='waiting at the starting line';
+  };
+  function raceLoop(){
+    if(document.getElementById('page-maze').classList.contains('active')&&raceRunning){
+      let allDone=true;
+      racers.forEach(r=>{
+        if(!r.solver.done){
+          allDone=false;
+          for(let i=0;i<5&&!r.solver.done;i++) r.solver.step();
+          r.elExp.textContent=r.solver.expanded;
+          if(r.solver.done){
+            if(r.solver.found){
+              finishOrder.push(r);
+              r.elPath.textContent=r.solver.path.length-1;
+              r.elStatus.textContent='finished #'+finishOrder.length;
+            } else r.elStatus.textContent='gave up';
+            r.div.classList.add('finished');
+            r.elStamp.textContent=r.solver.found?r.solver.expanded+' expansions':'no path';
+          }
+        }
+      });
+      raceDrawAll();
+      if(allDone){
+        raceRunning=false;
+        document.getElementById('btnRace').textContent='🏁 Start race';
+        if(finishOrder.length){
+          const winner=finishOrder.reduce((a,b)=>a.solver.expanded<=b.solver.expanded?a:b);
+          winner.elCrown.textContent='👑';
+          document.getElementById('raceStatus').textContent='winner by fewest expansions: '+winner.label;
+        }
+      }
+    }
+    requestAnimationFrame(raceLoop);
+  }
+  requestAnimationFrame(raceLoop);
+}
+
+/* ============================================================
+   COMPARE: CALCULATOR + QUIZ
+============================================================ */
+function fmtN(n){
+  if(n<1e6) return n.toLocaleString('en-US');
+  const e=Math.floor(Math.log10(n)), m=n/Math.pow(10,e);
+  return m.toFixed(2)+'×10^'+e;
+}
+function initCalc(){
+  const B=document.getElementById('cbB'),D=document.getElementById('cbD'),Mm=document.getElementById('cbM');
+  function upd(){
+    const b=+B.value,d=+D.value,m=+Mm.value;
+    document.getElementById('cbBv').textContent=b;
+    document.getElementById('cbDv').textContent=d;
+    document.getElementById('cbMv').textContent=m;
+    let bfs=0,ids=0,dfs=0;
+    for(let i=0;i<=d;i++){ bfs+=Math.pow(b,i); ids+=(d-i+1)*Math.pow(b,i); }
+    for(let i=0;i<=m;i++) dfs+=Math.pow(b,i);
+    const maxN=Math.max(bfs,ids,dfs);
+    const set=(id,n)=>{
+      document.getElementById('val'+id).textContent=fmtN(n);
+      document.getElementById('fill'+id).style.width=(Math.log10(n+1)/Math.log10(maxN+1)*100)+'%';
+    };
+    set('Bfs',bfs); set('Ids',ids); set('Dfs',dfs);
+    const mem={Bfs:Math.pow(b,d), Dfs:b*m, Ids:b*d};
+    const maxM=Math.max(mem.Bfs,mem.Dfs,mem.Ids);
+    for(const k in mem){
+      document.getElementById('mem'+k+'V').textContent=fmtN(mem[k]);
+      document.getElementById('mem'+k).style.width=(Math.log10(mem[k]+1)/Math.log10(maxM+1)*100)+'%';
+    }
+    const overhead=((ids-bfs)/bfs*100).toFixed(1);
+    document.getElementById('overheadChip').textContent=`IDS overhead vs BFS: +${overhead}% nodes, but memory drops from ${fmtN(mem.Bfs)} to ${fmtN(mem.Ids)}`;
+    document.getElementById('calcSentence').innerHTML=
+      `With <b>b = ${b}</b> and <b>d = ${d}</b>, BFS expands <b>${fmtN(bfs)}</b> nodes and IDS expands <b>${fmtN(ids)}</b>. DFS in the worst case (m = ${m}) could expand <b>${fmtN(dfs)}</b>.`;
+  }
+  [B,D,Mm].forEach(x=>x.addEventListener('input',upd));
+  upd();
+}
+
+const QUIZ=[
+  {q:'BFS always expands the node that has been waiting the longest. Which data structure produces that behavior?',
+   o:['A LIFO stack','A FIFO queue','A priority queue','A random bag'],a:1,
+   w:'First in, first out, like a line at a shop. Older nodes are shallower, so the search sweeps level by level.'},
+  {q:'Which strategy can plunge down an infinite branch and never come back?',
+   o:['BFS','IDS','DFS','DLS with l = d'],a:2,
+   w:'DFS follows the newest node forever. In an infinite tree it never returns to the other branches, which is exactly why DLS and IDS exist.'},
+  {q:'BFS is guaranteed to be optimal only when...',
+   o:['the tree is binary','all step costs are equal','a heuristic is available','the graph has no cycles'],a:1,
+   w:'With equal step costs, the shallowest goal is also the cheapest. With varying costs, a short path can still be expensive.'},
+  {q:'DLS stops and reports CUTOFF. What does that mean?',
+   o:['No solution exists anywhere','The goal was found but rejected','A solution might exist deeper than the limit','The memory ran out'],a:2,
+   w:'CUTOFF means the limit blocked the search, not that the subtree was proven empty. FAILURE is the result that means "definitely nothing here".'},
+  {q:'IDS re-expands the top levels over and over. Why is the overhead still small?',
+   o:['It caches nodes in a hash table','Most nodes live at the deepest level, and those are generated only once','It skips repeated states','The limit grows by 2 each time'],a:1,
+   w:'With b = 10 and d = 5, IDS generates about 123,456 nodes vs 111,111 for BFS. Only about 11% extra, in exchange for linear memory.'},
+  {q:'With b = 10 and d = 5, roughly how many nodes does BFS generate?',
+   o:['About 50','About 111,111','About 10 million','About 1 trillion'],a:1,
+   w:'1 + 10 + 100 + 1,000 + 10,000 + 100,000 = 111,111. Each extra level multiplies the work by b.'},
+  {q:'Large search space, unknown solution depth, limited memory. Which blind search do you pick?',
+   o:['BFS','Plain DFS','DLS with a random limit','IDS'],a:3,
+   w:'IDS is the standard default: complete, optimal for unit costs, linear space, and only a small constant factor of extra work.'}
+];
+let quizInited=false, score=0, answered=0;
+function initQuiz(){
+  if(quizInited) return; quizInited=true;
+  const box=document.getElementById('quizBox');
+  QUIZ.forEach((item,qi)=>{
+    const div=document.createElement('div'); div.className='quiz-q';
+    div.innerHTML=`<h4>Q${qi+1}. ${item.q}</h4><div class="quiz-opts"></div><div class="quiz-why">${item.w}</div>`;
+    const opts=div.querySelector('.quiz-opts');
+    item.o.forEach((opt,oi)=>{
+      const b=document.createElement('button'); b.textContent=opt;
+      b.onclick=()=>{
+        opts.querySelectorAll('button').forEach(x=>x.disabled=true);
+        answered++;
+        if(oi===item.a){b.classList.add('right');score++;}
+        else{b.classList.add('wrong');opts.children[item.a].classList.add('right');}
+        div.querySelector('.quiz-why').classList.add('show');
+        document.getElementById('scoreChip').textContent=`score ${score} / ${QUIZ.length}`;
+        if(answered===QUIZ.length){
+          document.getElementById('scoreChip').textContent=`final: ${score} / ${QUIZ.length} ${score===QUIZ.length?'🏆':score>=5?'🎉':'📖 reread the lessons'}`;
+        }
+      };
+      opts.appendChild(b);
+    });
+    box.appendChild(div);
+  });
+}
+
+/* ============================================================
+   GLOSSARY
+============================================================ */
+const GLOSS=[
+ ['State','Core','A situation at one moment, like "I am in Lahore" or a full puzzle layout.'],
+ ['Initial state','Core','Where the search starts. The root of the search tree.'],
+ ['Goal test','Core','The yes/no check: am I at the goal? There can be many goal states.'],
+ ['Action','Core','A legal move from the current state, like "drive to Gujranwala".'],
+ ['Transition model','Core','The rule saying which state results from taking an action.'],
+ ['Path cost','Core','Total cost of a sequence of actions: kilometers, minutes, or 1 per step.'],
+ ['Problem definition','Core','The full package: initial state, actions, transition model, goal test, path cost.'],
+ ['Node','Core','A bookkeeping record: state + parent + action + cost + depth. Not the same as a state.'],
+ ['Search tree','Core','The tree grown while searching. Root is the initial state.'],
+ ['Expand','Core','Apply every legal action to a node and create its children.'],
+ ['Generate','Core','Create a node object. Expanding a parent generates its children.'],
+ ['Frontier','Core','Generated but not yet expanded nodes. Also called open list or fringe. The whole game is choosing which one goes next.'],
+ ['Explored set','Core','States already expanded, also called closed list. Stops repeated work and cycles.'],
+ ['Heuristic','Analysis','An estimate of closeness to the goal. Blind search has none. Informed search (A*) lives on it.'],
+ ['Uninformed search','Analysis','Search with zero hints about direction. Also called blind search.'],
+ ['Branching factor b','Analysis','Maximum children per node.'],
+ ['Depth','Analysis','Steps from the root. Root is depth 0.'],
+ ['Completeness','Analysis','Guaranteed to find a solution if one exists.'],
+ ['Optimality','Analysis','Guaranteed to find the lowest cost solution.'],
+ ['Time complexity','Analysis','How many nodes get generated, as a function of b, d, m, l.'],
+ ['Space complexity','Analysis','Maximum nodes held in memory at once.'],
+ ['Big-O','Analysis','Growth rate ignoring constants. O(b^d) is exponential: one more level multiplies work by b.'],
+ ['FIFO queue','Structure','First in, first out. A shop line. Powers BFS.'],
+ ['LIFO stack','Structure','Last in, first out. A stack of plates. Powers DFS and DLS.'],
+ ['Backtrack','Structure','Return to the most recent node with unexplored children after hitting a dead end.'],
+ ['CUTOFF','Structure','DLS result: stopped at the depth limit, a solution might exist deeper.'],
+ ['FAILURE','Structure','DLS result: subtree fully searched, definitely no solution there.'],
+ ['Cycle','Structure','A path that loops back to a state already on it. Traps naive DFS forever.'],
+ ['Tree search vs graph search','Structure','Tree search ignores repeated states. Graph search keeps an explored set to skip them.'],
+ ['Diameter','Structure','Longest shortest path between any two states. A natural depth limit for DLS.'],
+ ['Shallowest goal','Analysis','The goal with the smallest depth. BFS and IDS target it.'],
+ ['Iterative deepening','Structure','Running DLS with limits 0, 1, 2, ... until success. BFS guarantees, DFS memory.']
+];
+let glossInited=false;
+function renderGlossary(){
+  if(glossInited) return; glossInited=true;
+  const grid=document.getElementById('glossGrid');
+  const colors={Core:'var(--amber)',Analysis:'var(--teal)',Structure:'var(--coral)'};
+  function build(filter){
+    grid.innerHTML='';
+    GLOSS.filter(([t,c,d])=>(t+c+d).toLowerCase().includes(filter.toLowerCase())).forEach(([t,c,d])=>{
+      const div=document.createElement('div'); div.className='gterm';
+      div.innerHTML=`<h4>${t}<span class="gtag" style="border-color:${colors[c]};color:${colors[c]}">${c}</span></h4><p>${d}</p>`;
+      grid.appendChild(div);
+    });
+    if(!grid.children.length) grid.innerHTML='<p style="color:var(--ink2)">No term matches. Try "frontier" or "cutoff".</p>';
+  }
+  build('');
+  document.getElementById('glossSearch').addEventListener('input',e=>build(e.target.value));
+}
+
+/* boot */
+showPage('home');
+</script>
+</body>
+</html>
